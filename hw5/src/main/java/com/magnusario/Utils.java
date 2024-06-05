@@ -9,7 +9,7 @@ import java.util.function.Consumer;
 public class Utils {
 
     public static final Properties properties = new Properties() {{
-        put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:29092,localhost:39092,localhost:49092");
+        put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:59092,localhost:39092,localhost:49092");
         put(StreamsConfig.APPLICATION_ID_CONFIG, "event-count-app");
         put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
