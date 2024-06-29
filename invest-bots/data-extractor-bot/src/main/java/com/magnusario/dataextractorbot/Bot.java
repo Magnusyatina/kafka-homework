@@ -8,6 +8,8 @@ import jakarta.annotation.PreDestroy;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,6 +31,8 @@ import java.util.stream.Collectors;
 @Component
 @EnableScheduling
 public class Bot {
+
+    private static final Logger logger = LoggerFactory.getLogger(Bot.class);
 
     @Autowired
     private InvestApi investApi;
@@ -62,7 +66,7 @@ public class Bot {
         if (tradableInstuments.isEmpty())
             return;
         investApi.getMarketDataStreamService().newStream("last_prices_stream", getMarketDataResponseStreamProcessor(), (e) -> {
-            System.out.println(e.getLocalizedMessage());
+            logger.warn(e.getLocalizedMessage());
         }).subscribeLastPrices(tradableInstuments);
     }
 
@@ -73,19 +77,19 @@ public class Bot {
                         .forEach(e -> {
                             SubscriptionStatus subscriptionStatus = e.getSubscriptionStatus();
                             if (SubscriptionStatus.SUBSCRIPTION_STATUS_SUCCESS != subscriptionStatus) {
-                                System.out.println("Unsuccessful susbcribe for instrument %s with status %s".formatted(e.getFigi(), e.getSubscriptionStatus()));
+                                logger.info("Unsuccessful susbcribe for instrument %s with status %s".formatted(e.getFigi(), e.getSubscriptionStatus()));
                                 TradableShareScanInfo tradableShareScanInfo = tradableShares.get(e.getFigi());
                                 //tradableShareScanInfo.setScanning(false);
                                 return;
                             }
-                            System.out.println("Subscribe for instrument %s".formatted(e.getFigi()));
+                            logger.info("Subscribe for instrument %s".formatted(e.getFigi()));
                         });
             } else if (response.hasLastPrice()) {
                 LastPrice lastPrice = response.getLastPrice();
                 Timestamp lastPriceTimestamp = lastPrice.getTime();
                 TradableShareScanInfo tradableShareScanInfo = tradableShares.get(lastPrice.getFigi());
                 BigDecimal lastPriceValue = parseValue(lastPrice.getPrice().getUnits(), lastPrice.getPrice().getNano());
-                System.out.println(STR."Publishing last price for \{lastPrice.getFigi()}. Last price is \{lastPriceValue}");
+                logger.info(STR."Publishing last price for \{lastPrice.getFigi()}. Last price is \{lastPriceValue}");
                 lastPricePublisher.publish(new com.magnusario.definitions.LastPrice(
                         tradableShareScanInfo.getFigi(),
                         lastPriceValue,
@@ -107,7 +111,7 @@ public class Bot {
     @PreDestroy
     public void destroy() {
         List<String> tradableInstruments = tradableShares.values().stream().map(TradableShareScanInfo::getFigi).collect(Collectors.toList());
-        System.out.println("Unsubscribe from tradableInstruments");
+        logger.info("Unsubscribe from tradableInstruments");
         investApi.getMarketDataStreamService().getAllStreams().values().forEach(e -> e.unsubscribeLastPrices(tradableInstruments));
     }
 
