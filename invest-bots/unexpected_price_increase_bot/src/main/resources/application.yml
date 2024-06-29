@@ -1,0 +1,14 @@
+spring.kafka.bootstrap-servers: "localhost:39092,localhost:49092,localhost:59092"
+signals:
+  meta:
+    - percent-limitation: 1.0
+      clean-interval: 15m
+      weight: 1
+    - percent-limitation: 5
+      clean-interval: 10m
+      weight: 2
+    - percent-limitation: 10
+      clean-interval: 5m
+      weight: 5
+
+

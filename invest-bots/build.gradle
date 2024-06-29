@@ -1,0 +1,23 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.magnusario'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+
+subprojects {
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = JavaVersion.VERSION_22
+        targetCompatibility = JavaVersion.VERSION_22
+        options.compilerArgs.add("--enable-preview")
+    }
+
+    repositories {
+        mavenCentral()
+    }
+}
