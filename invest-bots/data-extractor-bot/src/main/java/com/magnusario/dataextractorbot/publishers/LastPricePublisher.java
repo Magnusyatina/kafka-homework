@@ -6,22 +6,24 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
-import java.time.temporal.TemporalField;
-
 @Component
 public class LastPricePublisher implements MarketInformationPublisher<LastPrice> {
 
+    public static final String TOPIC_DESTINATION = "tradable-share-last-prices";
+
     @Autowired
-    private KafkaTemplate<String, LastPrice> kafkaTemplate;
+    private KafkaTemplate<String, LastPrice> lastPriceKafkaTemplate;
 
     @Override
     public void publish(LastPrice value) {
+        long eventTime = value.getZonedDateTime().toInstant().toEpochMilli();
+        String messageKey = value.getFigi();
         ProducerRecord<String, LastPrice> producerRecord = new ProducerRecord<>(
-                "tradable-share-last-prices",
+                TOPIC_DESTINATION,
                 null,
-                value.getZonedDateTime().toInstant().toEpochMilli(),
-                value.getFigi(),
+                eventTime,
+                messageKey,
                 value);
-        kafkaTemplate.send("tradable-share-last-prices", value.getFigi(), value);
+        lastPriceKafkaTemplate.send(producerRecord);
     }
 }

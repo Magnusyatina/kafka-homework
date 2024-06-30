@@ -41,7 +41,7 @@ public class Bot {
     private MarketInformationPublisher<com.magnusario.definitions.LastPrice> lastPricePublisher;
 
     @Autowired
-    private MarketInformationPublisher<Bot.TradableShareScanInfo> tradableSharePublisher;
+    private MarketInformationPublisher<TradableShare> tradableSharePublisher;
 
     private Map<String, TradableShareScanInfo> tradableShares;
 
@@ -51,7 +51,7 @@ public class Bot {
                 .getTradableSharesSync()
                 .stream()
                 .map(e -> new TradableShareScanInfo(
-                        new TradableShare(e.getFigi(), e.getTicker(), e.getCurrency()),
+                        new TradableShare(e.getFigi(), e.getTicker(), e.getCurrency(), ZonedDateTime.now(ZoneId.systemDefault())),
                         false))
                 .collect(Collectors.toConcurrentMap(TradableShareScanInfo::getFigi, e -> e, (e1, e2) -> e1));
     }
@@ -76,9 +76,10 @@ public class Bot {
                 response.getSubscribeLastPriceResponse().getLastPriceSubscriptionsList()
                         .forEach(e -> {
                             SubscriptionStatus subscriptionStatus = e.getSubscriptionStatus();
+                            TradableShareScanInfo tradableShareScanInfo = tradableShares.get(e.getFigi());
+                            publishTradableShare(tradableShareScanInfo);
                             if (SubscriptionStatus.SUBSCRIPTION_STATUS_SUCCESS != subscriptionStatus) {
                                 logger.info("Unsuccessful susbcribe for instrument %s with status %s".formatted(e.getFigi(), e.getSubscriptionStatus()));
-                                TradableShareScanInfo tradableShareScanInfo = tradableShares.get(e.getFigi());
                                 //tradableShareScanInfo.setScanning(false);
                                 return;
                             }
@@ -90,6 +91,7 @@ public class Bot {
                 TradableShareScanInfo tradableShareScanInfo = tradableShares.get(lastPrice.getFigi());
                 BigDecimal lastPriceValue = parseValue(lastPrice.getPrice().getUnits(), lastPrice.getPrice().getNano());
                 logger.info(STR."Publishing last price for \{lastPrice.getFigi()}. Last price is \{lastPriceValue}");
+                publishTradableShare(tradableShareScanInfo);
                 lastPricePublisher.publish(new com.magnusario.definitions.LastPrice(
                         tradableShareScanInfo.getFigi(),
                         lastPriceValue,
@@ -102,6 +104,14 @@ public class Bot {
 
             }
         };
+    }
+
+    private void publishTradableShare(TradableShareScanInfo tradableShareScanInfo) {
+        tradableSharePublisher.publish(new TradableShare(
+                tradableShareScanInfo.getFigi(),
+                tradableShareScanInfo.getTicker(),
+                tradableShareScanInfo.getCurrency(),
+                ZonedDateTime.now(ZoneId.systemDefault())));
     }
 
     private BigDecimal parseValue(long units, int nano) {
