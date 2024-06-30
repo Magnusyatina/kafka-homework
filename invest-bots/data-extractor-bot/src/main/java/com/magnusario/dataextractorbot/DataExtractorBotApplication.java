@@ -1,7 +1,7 @@
 package com.magnusario.dataextractorbot;
 
 import com.magnusario.definitions.LastPrice;
-import com.magnusario.definitions.serializers.LastPriceSerializer;
+import com.magnusario.definitions.TradableShare;
 import com.magnusario.definitions.serializers.ParametrizedJsonSerializer;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -69,7 +69,7 @@ public class DataExtractorBotApplication {
     }
 
     @Bean
-    public ProducerFactory<String, LastPrice> tradableShareProducerFactory() {
+    public ProducerFactory<String, TradableShare> tradableShareProducerFactory() {
         Map<String, Object> properties = new HashMap<>();
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -78,7 +78,7 @@ public class DataExtractorBotApplication {
     }
 
     @Bean
-    public KafkaTemplate<String, LastPrice> tradableShareKafkaTemplate() {
+    public KafkaTemplate<String, TradableShare> tradableShareKafkaTemplate() {
         return new KafkaTemplate<>(tradableShareProducerFactory());
     }
 
