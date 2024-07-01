@@ -1,5 +1,5 @@
 rootProject.name = 'invest-bots'
 
 include 'data-extractor-bot', 'invest-bots-definitions', 'unexpected_price_increase_bot', 'signals-monitor-bot'
-
+include 'notifications-bot'
 

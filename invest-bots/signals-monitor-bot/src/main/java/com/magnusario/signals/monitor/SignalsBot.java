@@ -4,18 +4,21 @@ package com.magnusario.signals.monitor;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.magnusario.definitions.Signal;
 import com.magnusario.definitions.bots.KafkaStreamBot;
+import com.magnusario.definitions.notifications.InvestNotification;
+import com.magnusario.definitions.notifications.InvestmentForecast;
 import com.magnusario.definitions.serdes.ParametrizedJsonSerde;
 import com.magnusario.definitions.serdes.SignalSerde;
 import lombok.Data;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.SlidingWindows;
-import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.WindowStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +40,7 @@ public class SignalsBot extends KafkaStreamBot {
     private static final String APPLICATION_ID = "signals-stream-bot-monitor";
     public static final String SOURCE_TOPIC = "signals";
     public static final int MIN_LIMITATION_OF_SIGNALS_WEIGHT = 1;
+    public static final String NOTIFICATIONS_TOPIC = "notifications";
 
     @Autowired
     public SignalsBot(KafkaProperties kafkaProperties) {
@@ -63,19 +67,16 @@ public class SignalsBot extends KafkaStreamBot {
                 .windowedBy(SlidingWindows.ofTimeDifferenceAndGrace(Duration.ofMinutes(15), Duration.ofMinutes(2)))
                 .aggregate(SignalWeightAggregator::new,
                         ((key, value, aggregate) -> aggregate.addSignal(key, value)), formSignalsWeightStore())
-                .filter(((key, value) -> value.getTotalWeights() > MIN_LIMITATION_OF_SIGNALS_WEIGHT))
+                .filter(((key, value) -> value.getTotalWeights() >= MIN_LIMITATION_OF_SIGNALS_WEIGHT))
                 .toStream()
-                .foreach((key, value) -> logger.info(STR."Form notification for figi \{key.key()}, because the weight of the signals exceeded the permissible threshold \{MIN_LIMITATION_OF_SIGNALS_WEIGHT}. Current weight sum = \{value.getTotalWeights()}"));
+                .peek(((key, value) -> logger.info(STR."Form notification for figi \{key.key()}, because the weight of the signals exceeded the permissible threshold \{MIN_LIMITATION_OF_SIGNALS_WEIGHT}. Current weight sum = \{value.getTotalWeights()}")))
+                .map(((key, value) -> new KeyValue<>(key.key(), formNotification(value))))
+                .to(NOTIFICATIONS_TOPIC, Produced.with(Serdes.String(), new ParametrizedJsonSerde<>(InvestNotification.class)));
         return streamsBuilder.build();
     }
 
-    private Materialized<String, Signal, KeyValueStore<Bytes, byte[]>> formLastSignalsStore() {
-        Materialized<String, Signal, KeyValueStore<Bytes, byte[]>> objectObjectStateStoreMaterialized
-                = Materialized.as("last-signals-store");
-        objectObjectStateStoreMaterialized = objectObjectStateStoreMaterialized.withKeySerde(Serdes.String())
-                .withValueSerde(new ParametrizedJsonSerde<>(Signal.class))
-                .withStoreType(Materialized.StoreType.ROCKS_DB);
-        return objectObjectStateStoreMaterialized;
+    private InvestNotification formNotification(SignalWeightAggregator value) {
+        return new InvestNotification(value.getKey(), InvestmentForecast.BUY, value.getLastSignalBySource().values().stream().toList());
     }
 
     private Materialized<String, SignalWeightAggregator, WindowStore<Bytes, byte[]>> formSignalsWeightStore() {
