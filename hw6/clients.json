@@ -1,0 +1,14 @@
+{
+  "name": "logs-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "12345",
+    "database.dbname" : "archive",
+    "topic.prefix": "postgres",
+    "table.include.list": "public.logs",
+    "plugin.name": "pgoutput"
+  }
+}
