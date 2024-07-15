@@ -1,0 +1,3 @@
+spring.kafka.bootstrap-servers: "localhost:39092,localhost:49092,localhost:59092"
+
+telegrambots.enabled: true
