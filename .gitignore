@@ -28,3 +28,5 @@ replay_pid*
 **/docker
 **/.gradle
 **/build/
+
+**/postgresql/data
