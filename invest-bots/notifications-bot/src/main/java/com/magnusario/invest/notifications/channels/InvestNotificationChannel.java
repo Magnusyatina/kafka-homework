@@ -5,6 +5,8 @@ import com.magnusario.definitions.notifications.TradableShareNotification;
 import lombok.EqualsAndHashCode;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
@@ -13,6 +15,9 @@ import java.util.stream.Collectors;
 
 @EqualsAndHashCode(of = {"channelId"})
 public class InvestNotificationChannel implements Channel<TradableShareNotification> {
+
+    private static final Logger logger = LoggerFactory.getLogger(InvestNotificationChannel.class);
+
 
     private final String channelId;
 
@@ -33,7 +38,11 @@ public class InvestNotificationChannel implements Channel<TradableShareNotificat
     @Override
     @SneakyThrows
     public void push(TradableShareNotification tradableShareNotification) {
-        telegramClient.execute(formSendMessage(tradableShareNotification));
+        try {
+            telegramClient.execute(formSendMessage(tradableShareNotification));
+        } catch (Exception exception) {
+            logger.warn("Ошибка при отправке уведомления в канал {}. Ошибка: {}", channelId, exception.getMessage());
+        }
     }
 
     @NotNull
@@ -59,6 +68,7 @@ public class InvestNotificationChannel implements Channel<TradableShareNotificat
                     .map(e -> STR."Сигнал: \{e.getSignalSource()}, Описание: \{e.getMessage()}, Важность: \{e.getWeight()}")
                     .collect(Collectors.joining("\n"));
             message += STR."""
+
                     Прогноз: \{signalsNotification.getInvestmentForecast()}
                     Детали:
                     \{additionalInformation}
