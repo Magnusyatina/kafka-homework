@@ -16,7 +16,7 @@ public class TelegramLongPollingBot implements SpringLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return "";
+        return "token";
     }
 
     @Override
